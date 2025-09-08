@@ -1,0 +1,50 @@
+name: CodSpeed
+
+on:
+  push:
+    branches:
+      - master
+      - 2.*
+  pull_request:
+    branches:
+      - master
+      - 2.*
+
+env:
+  GOFLAGS: "-tags=nobadger,nomysql,nopgx"
+  # https://github.com/actions/setup-go/issues/491
+  GOTOOLCHAIN: local
+
+permissions:
+  contents: read
+
+jobs:
+  benchmarks:
+    runs-on: codspeed-macro
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Install Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: "~1.25.0"
+          check-latest: true
+
+      - name: Get dependencies
+        run: |
+          go get -v -t -d ./...
+
+      - name: Run benchmarks
+        uses: CodSpeedHQ/action@v4
+        with:
+          mode: walltime
+          run: go test -bench=. ./...
